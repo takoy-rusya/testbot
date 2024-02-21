@@ -1,16 +1,20 @@
 import requests
 import time
 from random import choice
+import os
+from dotenv import load_dotenv
 
-API_URL = 'https://api.telegram.org/bot'
+load_dotenv()
+
+API_URL = os.getenv('API_URL')
 API_CAT_URL = 'https://api.thecatapi.com/v1/images/search'
 API_DOG_URL = 'https://random.dog/woof.json'
 API_FOX_URL = ' https://randomfox.ca/floof/'
 API_GIF_URL = 'https://yesno.wtf/api?force=yes'
-BOT_TOKEN = '6460540408:AAHkYNEg2skgqOBKKhHjfAacLjMq-V4tdc0'
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 ERROR_TEXT = 'Здесь должны были быть котики'
 MAX_COUNTER = 100
-api_url = [API_DOG_URL, API_FOX_URL, API_CAT_URL,API_GIF_URL]
+api_url = [API_DOG_URL, API_FOX_URL, API_CAT_URL, API_GIF_URL]
 
 offset = -2
 counter = 0
