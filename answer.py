@@ -13,14 +13,14 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 ATTEMPTS = 5
-
-user = {
-    'in_game': False,
-    'secret_number': None,
-    'attempts': None,
-    'total_games': 0,
-    'wins': 0
-}
+users = {}
+# user = {
+#     'in_game': False,
+#     'secret_number': None,
+#     'attempts': None,
+#     'total_games': 0,
+#     'wins': 0
+# }
 positive_answer_list = ['да', 'давай', 'играем', 'сыграем', 'погнали']
 negative_answer_list = ['не', 'не хочу', 'не буду', 'нет', 'не сегодня', 'не в этот раз', 'иди нахуй', 'иди на хуй',
                         'пошел в жопу', 'пошел на хуй', 'пошел нахуй']
@@ -43,8 +43,17 @@ async def process_start_command(message: Message):
         'Ещё один кожаный\nКороче я играю в игру "Угадай число"\n\n'
         'Если ты тупой и не понял из названия смысл игры, то жми /help, '
         'я там всё расскажу\n'
-        'Будешь играть?'
+        'Будешь играть?\n\n'
+        'Напиши "Да", "Погнали" или что вы там обычно пишите'
     )
+    if message.from_user.id not in users:
+        users[message.from_user.id] = {
+            'in_game': False,
+            'secret_number': None,
+            'attempts': None,
+            'total_games': 0,
+            'wins': 0
+        }
 
 
 @dp.message(Command(commands=['help']))
@@ -63,16 +72,17 @@ async def process_help_command(message: Message):
 async def process_stat_command(message: Message):
     """Хэндлер срабатывает на команду /stat и возвращает статистику игры"""
     await message.answer(
-        f'Всего завершенных игр: {user["total_games"]}\n'
-        f'Количество побед:{user["wins"]}'
+        f'Всего завершенных игр: '
+        f'{users[message.from_user.id]["total_games"]}\n'
+        f'Количество побед: {users[message.from_user.id]["wins"]}'
     )
 
 
 @dp.message(Command(commands=['cancel']))
 async def process_cancel_command(message: Message):
     """Хэндлер срабатывает на команду /cancel и завершает игру"""
-    if user['in_game']:
-        user['in_game'] = False
+    if users[message.from_user.id]['in_game']:
+        users[message.from_user.id]['in_game'] = False
         await message.answer(
             'Вы вышли из игры. Жду возвращения'
         )
@@ -85,10 +95,10 @@ async def process_cancel_command(message: Message):
 @dp.message(F.text.lower().in_(positive_answer_list))
 async def process_positive_anser(message: Message):
     """Хэндлер срабатывает на позитивный ответ"""
-    if not user['in_game']:
-        user['in_game'] = True
-        user['secret_number'] = get_random_number()
-        user['attempts'] = ATTEMPTS
+    if not users[message.from_user.id]['in_game']:
+        users[message.from_user.id]['in_game'] = True
+        users[message.from_user.id]['secret_number'] = get_random_number()
+        users[message.from_user.id]['attempts'] = ATTEMPTS
         await message.answer(
             'Ну что ж...\n\nЯ загадал число\n'
             'Докажи, что ты Ванга'
@@ -103,7 +113,7 @@ async def process_positive_anser(message: Message):
 @dp.message(F.text.lower().in_(negative_answer_list))
 async def process_negativ_answer(message: Message):
     """Хэндлер срабатывает на негативный ответ"""
-    if not user['in_game']:
+    if not users[message.from_user.id]['in_game']:
         await message.answer(
             'Я знал, что ты слабак и тряпка\n'
             'Вернёшся, если захочешь доказать обратное'
@@ -118,29 +128,29 @@ async def process_negativ_answer(message: Message):
 @dp.message(input_number_filter)
 async def process_number_answer(message: Message):
     """Хэндлер обрабатывает вводимое число и возвращает ответ"""
-    if user['in_game']:
-        if int(message.text) == user['secret_number']:
-            user['in_game'] = False
-            user['wins'] += 1
-            user['total_games'] += 1
+    if users[message.from_user.id]['in_game']:
+        if int(message.text) == users[message.from_user.id]['secret_number']:
+            users[message.from_user.id]['in_game'] = False
+            users[message.from_user.id]['wins'] += 1
+            users[message.from_user.id]['total_games'] += 1
             await message.answer(
                 'Дуракам везёт\n'
                 'Ещё раз сыграем? Не боишься облажаться?'
             )
 
-        elif int(message.text) < user['secret_number']:
-            user['attempts'] -= 1
+        elif int(message.text) < users[message.from_user.id]['secret_number']:
+            users[message.from_user.id]['attempts'] -= 1
             await message.answer('Моё число больше')
-        elif int(message.text) > user['secret_number']:
-            user['attempts'] -= 1
+        elif int(message.text) > users[message.from_user.id]['secret_number']:
+            users[message.from_user.id]['attempts'] -= 1
             await message.answer('Моё число меньше')
 
-        if user['attempts'] == 0:
-            user['in_game'] = False
-            user['total_games'] += 1
+        if users[message.from_user.id]['attempts'] == 0:
+            users[message.from_user.id]['in_game'] = False
+            users[message.from_user.id]['total_games'] += 1
             await message.answer(
                 f'Что ж... Я знал, что ты дно и не сможешь угадать\n'
-                f'Я загадал {user["secret_number"]}\n\n'
+                f'Я загадал {users[message.from_user.id]["secret_number"]}\n\n'
                 f'Докажешь, что ты не шелудивый пёс?'
             )
     else:
@@ -152,14 +162,19 @@ async def process_number_answer(message: Message):
 @dp.message()
 async def process_another_answer(message: Message):
     """Хэндлер срабатывает на другие сообщения"""
-    if user['in_game']:
-        if input_number_filter:
-            await message.answer("Ты что, дурак?\nДолжно быть число от 1 до 100")
+    if message.from_user.id in users:
+        if users[message.from_user.id]['in_game']:
+            if input_number_filter:
+                await message.answer("Ты что, дурак?\nДолжно быть число от 1 до 100")
 
+        else:
+            await message.answer(
+                'Я такой же ограниченный бот, как и твой кругозор\n'
+                'Может уже начнём играть и я тебе покажу твоё место?'
+            )
     else:
         await message.answer(
-            'Я такой же ограниченный бот, как и твой кругозор\n'
-            'Может уже начнём играть и я тебе покажу твоё место?'
+            'Я не понимаю тебя\nНажми /start, чтобы начать играть'
         )
 if __name__ == '__main__':
     dp.run_polling(bot)
